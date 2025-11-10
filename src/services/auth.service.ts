@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import admin from '../config/firebase';
+import { getFirebaseAdmin } from '../config/firebase';
 import prisma from '../config/database';
 import { RefreshToken } from '@prisma/client';
 
@@ -95,6 +95,12 @@ export class AuthService {
   }
 
   async firebaseAuth(idToken: string) {
+    const admin = getFirebaseAdmin();
+    
+    if (!admin) {
+      throw new Error('Firebase Admin is not configured. Please set FIREBASE_SERVICE_ACCOUNT environment variable.');
+    }
+
     try {
       // Verify Firebase ID token
       const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -230,15 +236,19 @@ export class AuthService {
 
   private async generateTokens(userId: string): Promise<AuthTokens> {
     // Generate access token
-    const accessToken = jwt.sign({ userId }, JWT_SECRET, {
-      expiresIn: JWT_ACCESS_EXPIRES_IN,
-    });
+    const accessToken = jwt.sign(
+      { userId },
+      JWT_SECRET as string,
+      {
+        expiresIn: JWT_ACCESS_EXPIRES_IN,
+      }
+    );
 
     // Generate refresh token
     const refreshTokenId = require('crypto').randomBytes(32).toString('hex');
     const refreshToken = jwt.sign(
       { userId, tokenId: refreshTokenId },
-      JWT_REFRESH_SECRET,
+      JWT_REFRESH_SECRET as string,
       {
         expiresIn: JWT_REFRESH_EXPIRES_IN,
       }
