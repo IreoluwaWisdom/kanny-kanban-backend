@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '../config/database';
-import { generateTokens } from '../services/auth.service';
+import jwt from 'jsonwebtoken';
 
 describe('Card API', () => {
   let authToken: string;
@@ -20,9 +20,12 @@ describe('Card API', () => {
     });
     userId = user.id;
 
-    // Generate tokens
-    const tokens = generateTokens(user.id, user.email);
-    authToken = tokens.accessToken;
+    // Generate token
+    authToken = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || 'test-secret',
+      { expiresIn: '15m' }
+    );
 
     // Create board with columns
     const board = await prisma.board.create({

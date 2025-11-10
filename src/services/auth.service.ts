@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { getFirebaseAdmin } from '../config/firebase';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import prisma from '../config/database';
 import { RefreshToken } from '@prisma/client';
 
@@ -68,9 +67,9 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Check if user has password (not Google-only user)
+    // Check if user has password
     if (!user.password) {
-      throw new Error('Please sign in with Google');
+      throw new Error("This account doesn't have a password set.");
     }
 
     // Verify password
@@ -94,110 +93,7 @@ export class AuthService {
     };
   }
 
-  async firebaseAuth(idToken: string) {
-    const admin = getFirebaseAdmin();
-    
-    if (!admin) {
-      throw new Error('Firebase Admin is not configured. Please set FIREBASE_SERVICE_ACCOUNT environment variable.');
-    }
-
-    try {
-      // Verify Firebase ID token
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      
-      const { uid: firebaseId, email } = decodedToken;
-
-      if (!email) {
-        throw new Error('Email not provided by Firebase');
-      }
-
-      // Get user record from Firebase to get name and picture
-      let firebaseUser;
-      try {
-        firebaseUser = await admin.auth().getUser(firebaseId);
-      } catch (error) {
-        // If we can't get user, continue with email only
-        firebaseUser = null;
-      }
-
-      const name = firebaseUser?.displayName || null;
-      const picture = firebaseUser?.photoURL || null;
-
-      // Find or create user
-      let user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { googleId: firebaseId },
-            { email },
-          ],
-        },
-      });
-
-      if (user) {
-        // Update user if needed
-        if (!user.googleId) {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              googleId: firebaseId,
-              avatar: picture || user.avatar,
-            },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              avatar: true,
-              createdAt: true,
-            },
-          });
-        } else if (picture && picture !== user.avatar) {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: { avatar: picture },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              avatar: true,
-              createdAt: true,
-            },
-          });
-        }
-      } else {
-        // Create new user
-        user = await prisma.user.create({
-          data: {
-            email,
-            name: name || email.split('@')[0],
-            googleId: firebaseId,
-            avatar: picture || null,
-          },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            avatar: true,
-            createdAt: true,
-          },
-        });
-      }
-
-      // Generate tokens
-      const tokens = await this.generateTokens(user.id);
-
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatar: user.avatar,
-        },
-        ...tokens,
-      };
-    } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Firebase authentication failed');
-    }
-  }
+  // Google/Firebase authentication removed
 
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
     try {
@@ -238,20 +134,16 @@ export class AuthService {
     // Generate access token
     const accessToken = jwt.sign(
       { userId },
-      JWT_SECRET as string,
-      {
-        expiresIn: JWT_ACCESS_EXPIRES_IN,
-      }
+      JWT_SECRET as Secret,
+      { expiresIn: JWT_ACCESS_EXPIRES_IN } as SignOptions
     );
 
     // Generate refresh token
     const refreshTokenId = require('crypto').randomBytes(32).toString('hex');
     const refreshToken = jwt.sign(
       { userId, tokenId: refreshTokenId },
-      JWT_REFRESH_SECRET as string,
-      {
-        expiresIn: JWT_REFRESH_EXPIRES_IN,
-      }
+      JWT_REFRESH_SECRET as Secret,
+      { expiresIn: JWT_REFRESH_EXPIRES_IN } as SignOptions
     );
 
     // Store refresh token in database
