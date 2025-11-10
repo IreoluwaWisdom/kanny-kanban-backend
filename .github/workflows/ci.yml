@@ -40,8 +40,8 @@ jobs:
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
-      - name: Run migrations
-        run: npm run prisma:migrate
+      - name: Apply migrations
+        run: npm run prisma:migrate:deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kanny_kanban_test?schema=public
 
@@ -84,4 +84,3 @@ jobs:
         with:
           service-id: ${{ secrets.RENDER_SERVICE_ID }}
           api-key: ${{ secrets.RENDER_API_KEY }}
-

@@ -57,7 +57,7 @@ JWT_ACCESS_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 PORT=3001
 NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+CORS_ORIGIN=http://localhost:3000
 ```
 
 4. Set up the database:
@@ -112,8 +112,8 @@ src/
 ### Columns
 
 - `POST /api/boards/:boardId/columns` - Create column (protected)
-- `PUT /api/columns/:id` - Update column (protected)
-- `DELETE /api/columns/:id` - Delete column (protected)
+- `PUT /api/boards/columns/:id` - Update column (protected)
+- `DELETE /api/boards/columns/:id` - Delete column (protected)
 
 ### Cards
 
@@ -184,9 +184,8 @@ npm run prisma:studio
 - `JWT_REFRESH_EXPIRES_IN` - Refresh token expiration (default: 7d)
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
-- `FRONTEND_URL` - Frontend URL for CORS
+- `CORS_ORIGIN` - Comma-separated list of frontend origins allowed by CORS
 
 ## License
 
 MIT
-

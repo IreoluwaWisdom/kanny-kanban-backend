@@ -56,10 +56,12 @@ app.use((req, res) => {
 
 const HOST = process.env.HOST || '0.0.0.0';
 
-app.listen(Number(PORT), HOST, () => {
-  logger.info(`Server is running on http://${HOST}:${PORT}`);
-  logger.info(`CORS enabled for: ${CORS_ORIGIN}`);
-});
+// Only start the HTTP server outside of test environment
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(Number(PORT), HOST, () => {
+    logger.info(`Server is running on http://${HOST}:${PORT}`);
+    logger.info(`CORS enabled for: ${CORS_ORIGIN}`);
+  });
+}
 
 export default app;
-

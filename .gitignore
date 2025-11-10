@@ -32,8 +32,8 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Prisma
-prisma/migrations/
+# Prisma (keep migrations tracked for deploy)
+# prisma/migrations/
 
 # Firebase service account keys
 *-service-account.json
@@ -44,4 +44,3 @@ service-account*.json
 *.pem
 *.key
 private-key*
-
