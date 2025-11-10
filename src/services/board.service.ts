@@ -60,7 +60,7 @@ export class BoardService {
     if (!board) {
       board = await prisma.board.create({
         data: {
-          name: 'My Board',
+          name: 'Kanny',
           userId,
           columns: {
             create: [
