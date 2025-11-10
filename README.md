@@ -185,7 +185,3 @@ npm run prisma:studio
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
 - `CORS_ORIGIN` - Comma-separated list of frontend origins allowed by CORS
-
-## License
-
-MIT
