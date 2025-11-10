@@ -17,5 +17,7 @@ services:
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
       - key: CORS_ORIGIN
         sync: false

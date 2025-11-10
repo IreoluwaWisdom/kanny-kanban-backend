@@ -33,6 +33,30 @@ export class AuthController {
     }
   }
 
+  async firebaseAuth(req: Request, res: Response) {
+    try {
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).json({ message: 'Firebase ID token is required' });
+      }
+
+      const result = await authService.firebaseAuth(idToken);
+
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.json({ accessToken: result.accessToken, user: result.user });
+    } catch (error) {
+      res.status(401).json({
+        message: error instanceof Error ? error.message : 'Firebase authentication failed',
+      });
+    }
+  }
   async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;

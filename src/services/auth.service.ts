@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import prisma from '../config/database';
+import { getFirebaseAdmin } from '../config/firebase';
 import { RefreshToken } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -57,6 +58,66 @@ export class AuthService {
     };
   }
 
+  async firebaseAuth(idToken: string) {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin is not configured. Please set FIREBASE_SERVICE_ACCOUNT environment variable.');
+    }
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const { uid: firebaseId, email } = decodedToken as { uid: string; email?: string; email_verified?: boolean };
+      if (!email) throw new Error('Email not provided by Firebase');
+      if (decodedToken && (decodedToken as any).email_verified === false) {
+        throw new Error('Please verify your email before signing in');
+      }
+
+      // Try to fetch additional profile data
+      let firebaseUser: import('firebase-admin').auth.UserRecord | null = null;
+      try {
+        firebaseUser = await admin.auth().getUser(firebaseId);
+      } catch {
+        firebaseUser = null;
+      }
+
+      const name = firebaseUser?.displayName || email.split('@')[0];
+      const picture = firebaseUser?.photoURL || null;
+
+      // Find or create user
+      let user = await prisma.user.findFirst({
+        where: { OR: [{ email }, { googleId: firebaseId }] },
+        select: { id: true, email: true, name: true, avatar: true, googleId: true, createdAt: true },
+      });
+
+      if (user) {
+        // Ensure googleId/avatar are synced
+        if (!user.googleId || (picture && picture !== user.avatar)) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              googleId: firebaseId,
+              avatar: picture ?? user.avatar,
+              name: user.name || name,
+            },
+            select: { id: true, email: true, name: true, avatar: true, googleId: true, createdAt: true },
+          });
+        }
+      } else {
+        user = await prisma.user.create({
+          data: { email, name, googleId: firebaseId, avatar: picture },
+          select: { id: true, email: true, name: true, avatar: true, googleId: true, createdAt: true },
+        });
+      }
+
+      const tokens = await this.generateTokens(user!.id);
+      return {
+        user: { id: user!.id, email: user!.email, name: user!.name, avatar: user!.avatar || undefined },
+        ...tokens,
+      };
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Firebase authentication failed');
+    }
+  }
   async login(email: string, password: string) {
     // Find user
     const user = await prisma.user.findUnique({
